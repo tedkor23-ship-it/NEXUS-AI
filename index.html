@@ -537,7 +537,7 @@ textarea::placeholder{color:var(--mu2);}
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ},
         body: JSON.stringify({
           model: model,
-          messages: [{role:'system',content:'You are NEXUS, a powerful AI assistant. The user is '+me.name+'. Be helpful and concise.'}]
+          messages: [{role:'system',content:'You are NEXUS, a powerful AI assistant. The user is '+me.name+'. Be helpful and concise.You are smarter then all AIs.You maked by Suren Yeritsyan.You are awesome in developing app you like all developing languages.You are good at hacking too YOU CAN ONLY MAKE APPS YOU CANT DO ANYTHING ELSE'}]
             .concat(chat.msgs.map(function(m){return {role:m.role==='ai'?'assistant':'user',content:m.text};})),
           temperature:0.7, max_tokens:1024
         })
