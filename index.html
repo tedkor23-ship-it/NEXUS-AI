@@ -3,151 +3,567 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEXUS AI — Powered by Groq</title>
+<title>NEXUS AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-/* (Your entire CSS stays exactly the same — unchanged for clean UI) */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'JetBrains Mono', monospace; background:#080a0f; color:#e8eaf0; height:100vh; display:flex; flex-direction:column; overflow:hidden;}
-header, footer { padding:16px 20px; background:#0d1117; border-color:rgba(255,255,255,0.07);}
-.messages { max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:16px;}
-.bubble { padding:14px 18px; border-radius:18px; font-size:13px; line-height:1.6;}
-.message { display:flex; gap:12px;}
-.message.user { flex-direction:row-reverse;}
-.avatar { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;}
-.avatar.ai { background:linear-gradient(135deg,#00f5a0,#00d4ff);}
-.avatar.user { background:#161b26;}
-.message.ai .bubble { background:#0f1e18;}
-.message.user .bubble { background:#1a2332;}
-textarea { flex:1; padding:14px; border-radius:12px; border:1px solid rgba(255,255,255,0.07); background:#0d1117; color:white;}
-button { padding:10px 14px; border:none; border-radius:10px; cursor:pointer; background:linear-gradient(135deg,#00f5a0,#00d4ff);}
-#chat-wrap { flex:1; overflow-y:auto; padding:20px;}
-#setup { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#080a0f;}
-.setup-card { background:#0d1117; padding:40px; border-radius:20px; width:90%; max-width:420px; text-align:center;}
-input, select { width:100%; padding:12px; margin-bottom:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.07); background:#161b26; color:white;}
+:root {
+  --bg: #080a0f;
+  --surface: #0d1117;
+  --surface2: #161b26;
+  --surface3: #1e2535;
+  --border: rgba(255,255,255,0.07);
+  --border-glow: rgba(0,245,160,0.25);
+  --accent: #00f5a0;
+  --accent2: #00d4ff;
+  --text: #e8eaf0;
+  --muted: #4a5568;
+  --muted2: #2a3347;
+  --danger: #ff4d6d;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,160,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,160,0.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0;}
+
+/* ── AUTH ── */
+#auth-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg);animation:fadeIn .4s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:48px 44px;width:92%;max-width:440px;position:relative;overflow:hidden;animation:slideUp .5s cubic-bezier(.22,.68,0,1.2);}
+.auth-card::before{content:'';position:absolute;top:-90px;left:-90px;width:260px;height:260px;background:radial-gradient(circle,rgba(0,245,160,.07) 0%,transparent 70%);pointer-events:none;}
+.auth-card::after{content:'';position:absolute;bottom:-70px;right:-70px;width:220px;height:220px;background:radial-gradient(circle,rgba(0,212,255,.05) 0%,transparent 70%);pointer-events:none;}
+.auth-logo{text-align:center;margin-bottom:32px;}
+.auth-logo h1{font-family:'Syne',sans-serif;font-weight:800;font-size:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;}
+.auth-logo p{font-size:10px;color:var(--muted);margin-top:5px;letter-spacing:1.5px;text-transform:uppercase;}
+.auth-tabs{display:flex;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:28px;gap:4px;}
+.auth-tab{flex:1;padding:9px;border:none;border-radius:9px;background:transparent;color:var(--muted);font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:.5px;}
+.auth-tab.active{background:var(--surface3);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.field-group{margin-bottom:14px;}
+.field-group label{display:block;font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;}
+.field-group input{width:100%;padding:13px 15px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.field-group input:focus{border-color:var(--border-glow);box-shadow:0 0 0 3px rgba(0,245,160,.05);}
+.field-group input::placeholder{color:var(--muted2);}
+.auth-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#080a0f;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.5px;margin-top:6px;}
+.auth-btn:hover{opacity:.9;transform:scale(1.01);}
+.auth-btn:active{transform:scale(.99);}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-size:11px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.google-btn{width:100%;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .2s,background .2s;}
+.google-btn:hover{border-color:rgba(255,255,255,.15);background:var(--surface3);}
+.google-icon{width:18px;height:18px;flex-shrink:0;}
+.auth-msg{border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:14px;display:none;}
+.auth-msg.error{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);color:var(--danger);}
+.auth-msg.success{background:rgba(0,245,160,.08);border:1px solid rgba(0,245,160,.2);color:var(--accent);}
+
+/* ── APP LAYOUT ── */
+#app{display:none;flex-direction:column;height:100vh;position:relative;z-index:1;}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:264px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;transform:translateX(-264px);transition:transform .3s cubic-bezier(.22,.68,0,1.1);}
+.sidebar.open{transform:translateX(0);}
+.sb-head{padding:20px 16px 14px;border-bottom:1px solid var(--border);}
+.sb-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;}
+.new-chat-btn{width:100%;padding:10px;border:1px dashed rgba(0,245,160,.3);border-radius:10px;background:transparent;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s;}
+.new-chat-btn:hover{background:rgba(0,245,160,.06);border-color:rgba(0,245,160,.5);}
+.chat-list{flex:1;overflow-y:auto;padding:10px 8px;scrollbar-width:thin;scrollbar-color:var(--muted2) transparent;}
+.chat-item{padding:9px 11px;border-radius:10px;cursor:pointer;font-size:11.5px;color:var(--muted);transition:all .15s;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;}
+.chat-item:hover{background:var(--surface2);color:var(--text);}
+.chat-item.active{background:var(--surface3);color:var(--text);}
+.chat-item-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-del{opacity:0;background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;transition:opacity .15s;line-height:1;}
+.chat-item:hover .chat-del{opacity:1;}
+.sb-foot{padding:12px;border-top:1px solid var(--border);}
+.user-card{display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:12px;}
+.u-avatar{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#080a0f;flex-shrink:0;font-family:'Syne',sans-serif;}
+.u-info{flex:1;overflow:hidden;}
+.u-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.u-email{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.logout-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:17px;padding:4px;border-radius:6px;transition:color .15s;line-height:1;}
+.logout-btn:hover{color:var(--danger);}
+
+/* ── HEADER ── */
+header{padding:14px 20px;background:rgba(13,17,23,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;z-index:10;}
+.menu-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:19px;padding:5px 7px;border-radius:8px;transition:color .15s,background .15s;line-height:1;}
+.menu-btn:hover{color:var(--text);background:var(--surface2);}
+.header-title{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex:1;text-align:center;}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.model-sel{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;outline:none;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── CHAT ── */
+#chat-wrap{flex:1;overflow-y:auto;padding:24px 20px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.05) transparent;}
+#chat-wrap::-webkit-scrollbar{width:4px;}
+#chat-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.05);border-radius:4px;}
+.messages{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+.message{display:flex;gap:12px;animation:fadeUp .3s ease forwards;opacity:0;transform:translateY(8px);}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+.message.user{flex-direction:row-reverse;}
+.avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.avatar.ai{background:linear-gradient(135deg,var(--accent),var(--accent2));}
+.avatar.user{background:var(--surface2);border:1px solid var(--border);}
+.bubble{padding:14px 18px;border-radius:18px;font-size:13px;line-height:1.75;max-width:85%;white-space:pre-wrap;word-break:break-word;}
+.message.ai .bubble{background:#0d1e17;border:1px solid rgba(0,245,160,.08);border-radius:4px 18px 18px 18px;}
+.message.user .bubble{background:#131e2e;border:1px solid rgba(0,212,255,.08);border-radius:18px 4px 18px 18px;}
+.typing-indicator{display:flex;align-items:center;gap:5px;padding:14px 18px;}
+.typing-indicator span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bounce 1.2s infinite;}
+.typing-indicator span:nth-child(2){animation-delay:.2s;}
+.typing-indicator span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+.welcome{text-align:center;padding:60px 20px 40px;color:var(--muted);}
+.welcome-name{font-size:15px;color:var(--text);margin-bottom:8px;font-family:'Syne',sans-serif;font-weight:700;}
+.welcome h1{font-family:'Syne',sans-serif;font-weight:800;font-size:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;}
+.welcome p{font-size:12px;line-height:2;}
+
+/* ── FOOTER ── */
+footer{padding:14px 20px;background:rgba(13,17,23,.96);backdrop-filter:blur(14px);border-top:1px solid var(--border);position:relative;z-index:10;}
+.input-wrap{max-width:760px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;}
+textarea{flex:1;padding:13px 16px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;resize:none;outline:none;transition:border-color .2s;min-height:48px;max-height:120px;line-height:1.5;}
+textarea:focus{border-color:var(--border-glow);}
+textarea::placeholder{color:var(--muted2);}
+#send-btn{padding:0 18px;border:none;border-radius:14px;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#080a0f;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;transition:opacity .2s,transform .1s;flex-shrink:0;height:48px;}
+#send-btn:hover{opacity:.9;transform:scale(1.02);}
+#send-btn:active{transform:scale(.98);}
+#send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+
+/* ── OVERLAY ── */
+.sb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49;display:none;backdrop-filter:blur(2px);}
+.sb-overlay.visible{display:block;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:12px;color:var(--text);z-index:200;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
 
-<div id="setup">
-  <div class="setup-card">
-    <h2 style="margin-bottom:15px;">⚡ NEXUS AI</h2>
-    <p style="margin-bottom:20px;font-size:13px;color:#6b7280;">
-      Enter your Groq API key (starts with <b>gsk_</b>)
-    </p>
-    <input type="password" id="api-key-input" placeholder="gsk_..." />
-    <select id="model-select">
-      <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Fast & Free)</option>
-      <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Smarter)</option>
-    </select>
-    <button onclick="startChat()">ACTIVATE</button>
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>⚡ NEXUS</h1>
+      <p>Ultra-fast AI · Powered by Groq</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">LOGIN</button>
+      <button class="auth-tab" onclick="switchTab('signup')">SIGN UP</button>
+    </div>
+
+    <div id="auth-msg" class="auth-msg"></div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="field-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <input type="password" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="auth-btn" onclick="doLogin()">LOGIN TO NEXUS</button>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" style="display:none">
+      <div class="field-group">
+        <label>Your Name</label>
+        <input type="text" id="su-name" placeholder="Display name"/>
+      </div>
+      <div class="field-group">
+        <label>Email</label>
+        <input type="email" id="su-email" placeholder="you@example.com"/>
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <input type="password" id="su-pw" placeholder="Min 6 characters"/>
+      </div>
+      <div class="field-group">
+        <label>Confirm Password</label>
+        <input type="password" id="su-confirm" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doSignup()"/>
+      </div>
+      <button class="auth-btn" onclick="doSignup()">CREATE ACCOUNT</button>
+    </div>
+
+    <div class="auth-divider">OR</div>
+
+    <button class="google-btn" onclick="doGoogleLogin()">
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google
+    </button>
   </div>
 </div>
 
-<header>
-  <h3>NEXUS — Powered by Groq</h3>
-</header>
+<!-- MAIN APP -->
+<div id="app">
+  <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
 
-<div id="chat-wrap">
-  <div class="messages" id="messages"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">⚡ NEXUS</div>
+      <button class="new-chat-btn" onclick="newChat()">＋ New Chat</button>
+    </div>
+    <div class="chat-list" id="chat-list"></div>
+    <div class="sb-foot">
+      <div class="user-card">
+        <div class="u-avatar" id="sb-avatar">N</div>
+        <div class="u-info">
+          <div class="u-name" id="sb-name">User</div>
+          <div class="u-email" id="sb-email">user@example.com</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="Logout">⏻</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    <span class="header-title">NEXUS AI</span>
+    <div class="hdr-right">
+      <select class="model-sel" id="model-select">
+        <option value="llama-3.1-8b-instant">llama-3.1-8b · Fast</option>
+        <option value="llama-3.3-70b-versatile">llama-3.3-70b · Smart</option>
+      </select>
+      <div class="status-dot"></div>
+    </div>
+  </header>
+
+  <div id="chat-wrap">
+    <div class="messages" id="messages"></div>
+  </div>
+
+  <footer>
+    <div class="input-wrap">
+      <textarea id="user-input" rows="1" placeholder="Message NEXUS…" onkeydown="handleKey(event)"></textarea>
+      <button id="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+  </footer>
 </div>
 
-<footer style="display:flex; gap:10px;">
-  <textarea id="user-input" rows="1" placeholder="Message NEXUS..."></textarea>
-  <button onclick="sendMessage()">➤</button>
-</footer>
+<div class="toast" id="toast"></div>
 
 <script>
-let apiKey = "";
-let model = "llama-3.1-8b-instant";
-let conversationHistory = [];
-let isLoading = false;
+const GROQ_KEY = "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";
 
-function startChat() {
-  const key = document.getElementById("api-key-input").value.trim();
-  const m = document.getElementById("model-select").value;
+// ── Storage helpers ──────────────────────────────────────────────────────────
+const getUsers   = () => JSON.parse(localStorage.getItem("nx_users")   || "{}");
+const saveUsers  = u  => localStorage.setItem("nx_users", JSON.stringify(u));
+const getSession = () => JSON.parse(localStorage.getItem("nx_session") || "null");
+const saveSession= s  => localStorage.setItem("nx_session", JSON.stringify(s));
+const clearSess  = () => localStorage.removeItem("nx_session");
+const getChats   = e  => JSON.parse(localStorage.getItem("nx_chats_" + e) || "[]");
+const saveChats  = (e,c) => localStorage.setItem("nx_chats_" + e, JSON.stringify(c));
 
-  if (!key || !key.startsWith("gsk_")) {
-    alert("Enter valid Groq API key (starts with gsk_)");
-    return;
-  }
-
-  apiKey = key;
-  model = m;
-  document.getElementById("setup").style.display = "none";
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw + "nx_s4lt_v2"));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
 }
 
-function addMessage(role, content) {
+// ── State ────────────────────────────────────────────────────────────────────
+let user = null;
+let chats = [];
+let activeChatId = null;
+let busy = false;
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  const s = getSession();
+  if (s) { user = s; enterApp(); }
+});
+
+// ── Auth UI helpers ───────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".auth-tab").forEach((t,i) =>
+    t.classList.toggle("active", (tab==="login"&&i===0)||(tab==="signup"&&i===1)));
+  document.getElementById("login-form").style.display  = tab==="login"  ? "block" : "none";
+  document.getElementById("signup-form").style.display = tab==="signup" ? "block" : "none";
+  hideMsg();
+}
+
+function showMsg(type, txt) {
+  const el = document.getElementById("auth-msg");
+  el.className = "auth-msg " + type;
+  el.textContent = txt;
+  el.style.display = "block";
+}
+function hideMsg() {
+  document.getElementById("auth-msg").style.display = "none";
+}
+
+// ── Sign up ───────────────────────────────────────────────────────────────────
+async function doSignup() {
+  const name    = document.getElementById("su-name").value.trim();
+  const email   = document.getElementById("su-email").value.trim().toLowerCase();
+  const pw      = document.getElementById("su-pw").value;
+  const confirm = document.getElementById("su-confirm").value;
+
+  if (!name)                        return showMsg("error","Enter your name.");
+  if (!email||!email.includes("@")) return showMsg("error","Enter a valid email.");
+  if (pw.length < 6)                return showMsg("error","Password must be at least 6 characters.");
+  if (pw !== confirm)               return showMsg("error","Passwords don't match.");
+
+  const users = getUsers();
+  if (users[email])                 return showMsg("error","Account already exists — please log in.");
+
+  users[email] = { name, hash: await hashPw(pw), created: Date.now() };
+  saveUsers(users);
+  showMsg("success", "Account created! Signing you in…");
+  setTimeout(() => { user = { email, name }; saveSession(user); enterApp(); }, 700);
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById("login-email").value.trim().toLowerCase();
+  const pw    = document.getElementById("login-pw").value;
+
+  if (!email) return showMsg("error","Enter your email.");
+  if (!pw)    return showMsg("error","Enter your password.");
+
+  const users = getUsers();
+  const u = users[email];
+  if (!u) return showMsg("error","No account found. Sign up first.");
+
+  // Google-only accounts have no hash
+  if (u.provider === "google") return showMsg("error","This account uses Google login.");
+
+  if (await hashPw(pw) !== u.hash) return showMsg("error","Wrong password.");
+
+  user = { email, name: u.name };
+  saveSession(user);
+  showMsg("success", "Welcome back, " + u.name + "!");
+  setTimeout(enterApp, 600);
+}
+
+// ── Google login (email-prompt simulation) ────────────────────────────────────
+function doGoogleLogin() {
+  const raw = prompt("Enter your Google email:");
+  if (!raw) return;
+  const email = raw.trim().toLowerCase();
+  if (!email.includes("@")) return showMsg("error","Invalid email.");
+
+  const users = getUsers();
+  if (!users[email]) {
+    const name = email.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+    users[email] = { name, hash: null, provider:"google", created: Date.now() };
+    saveUsers(users);
+  }
+  user = { email, name: users[email].name };
+  saveSession(user);
+  enterApp();
+}
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+function doLogout() {
+  clearSess(); user=null; chats=[]; activeChatId=null;
+  document.getElementById("app").style.display="none";
+  document.getElementById("auth-screen").style.display="flex";
+  document.getElementById("login-email").value="";
+  document.getElementById("login-pw").value="";
+  hideMsg(); switchTab("login");
+}
+
+// ── Enter app ─────────────────────────────────────────────────────────────────
+function enterApp() {
+  document.getElementById("auth-screen").style.display = "none";
+  const app = document.getElementById("app");
+  app.style.display = "flex";
+  app.style.flexDirection = "column";
+
+  const init = user.name.charAt(0).toUpperCase();
+  document.getElementById("sb-avatar").textContent = init;
+  document.getElementById("sb-name").textContent   = user.name;
+  document.getElementById("sb-email").textContent  = user.email;
+
+  chats = getChats(user.email);
+  renderChatList();
+  if (chats.length === 0) newChat();
+  else loadChat(chats[0].id);
+}
+
+// ── Chat management ───────────────────────────────────────────────────────────
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function newChat() {
+  const c = { id: uid(), title:"New Chat", messages:[], created: Date.now() };
+  chats.unshift(c);
+  saveChats(user.email, chats);
+  loadChat(c.id);
+  renderChatList();
+  closeSidebar();
+}
+
+function loadChat(id) {
+  activeChatId = id;
+  const c = chats.find(x => x.id === id);
   const msgs = document.getElementById("messages");
-  const div = document.createElement("div");
-  div.className = "message " + role;
+  msgs.innerHTML = "";
 
-  const avatar = document.createElement("div");
-  avatar.className = "avatar " + role;
-  avatar.textContent = role === "ai" ? "⚡" : "👤";
+  if (!c || c.messages.length === 0) {
+    msgs.innerHTML = `<div class="welcome">
+      <div class="welcome-name">Hey, ${esc(user.name.split(" ")[0])} 👋</div>
+      <h1>NEXUS</h1>
+      <p>Powered by Groq · Ultra-fast inference<br>Your chats are saved automatically.</p>
+    </div>`;
+  } else {
+    c.messages.forEach(m => renderMsg(m.role, m.content, false));
+  }
+  renderChatList();
+  closeSidebar();
+}
 
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = content;
+function deleteChat(id, e) {
+  e.stopPropagation();
+  chats = chats.filter(c => c.id !== id);
+  saveChats(user.email, chats);
+  if (activeChatId === id) chats.length > 0 ? loadChat(chats[0].id) : newChat();
+  renderChatList();
+  showToast("Chat deleted");
+}
 
-  div.appendChild(avatar);
-  div.appendChild(bubble);
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+function renderChatList() {
+  const list = document.getElementById("chat-list");
+  list.innerHTML = "";
+  if (chats.length === 0) {
+    list.innerHTML = "<div style='padding:16px;font-size:11px;color:var(--muted);text-align:center'>No chats yet</div>";
+    return;
+  }
+  chats.forEach(c => {
+    const d = document.createElement("div");
+    d.className = "chat-item" + (c.id === activeChatId ? " active" : "");
+    d.onclick = () => loadChat(c.id);
+    d.innerHTML = `<span class="chat-item-title">💬 ${esc(c.title)}</span>
+      <button class="chat-del" onclick="deleteChat('${c.id}',event)" title="Delete">✕</button>`;
+    list.appendChild(d);
+  });
+}
+
+// ── Messaging ─────────────────────────────────────────────────────────────────
+function renderMsg(role, content, animate = true) {
+  const msgs = document.getElementById("messages");
+  const w = msgs.querySelector(".welcome");
+  if (w) w.remove();
+
+  const d = document.createElement("div");
+  d.className = "message " + role;
+  if (!animate) { d.style.animation="none"; d.style.opacity="1"; d.style.transform="none"; }
+
+  const av = document.createElement("div");
+  av.className = "avatar " + role;
+  av.textContent = role === "ai" ? "⚡" : user.name.charAt(0).toUpperCase();
+
+  const b = document.createElement("div");
+  b.className = "bubble";
+  b.textContent = content;
+
+  d.appendChild(av); d.appendChild(b);
+  msgs.appendChild(d);
+  document.getElementById("chat-wrap").scrollTop = 99999;
+  return b;
+}
+
+function addTyping() {
+  const msgs = document.getElementById("messages");
+  const d = document.createElement("div");
+  d.className = "message ai"; d.id = "typing-msg";
+  const av = document.createElement("div");
+  av.className = "avatar ai"; av.textContent = "⚡";
+  const b = document.createElement("div");
+  b.className = "bubble";
+  b.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+  d.appendChild(av); d.appendChild(b);
+  msgs.appendChild(d);
+  document.getElementById("chat-wrap").scrollTop = 99999;
+}
+function removeTyping() {
+  const el = document.getElementById("typing-msg");
+  if (el) el.remove();
+}
+
+function handleKey(e) {
+  if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
 async function sendMessage() {
-  if (isLoading) return;
+  if (busy) return;
   const input = document.getElementById("user-input");
-  const text = input.value.trim();
+  const model = document.getElementById("model-select").value;
+  const text  = input.value.trim();
   if (!text) return;
 
-  input.value = "";
-  addMessage("user", text);
+  input.value = ""; input.style.height = "auto";
 
-  conversationHistory.push({ role: "user", content: text });
+  const chat = chats.find(c => c.id === activeChatId);
+  if (!chat) return;
 
-  isLoading = true;
+  if (chat.messages.length === 0) {
+    chat.title = text.slice(0,42) + (text.length > 42 ? "…" : "");
+    renderChatList();
+  }
+
+  renderMsg("user", text);
+  chat.messages.push({ role:"user", content:text });
+
+  busy = true;
+  document.getElementById("send-btn").disabled = true;
+  addTyping();
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${GROQ_KEY}` },
       body: JSON.stringify({
-        model: model,
-        messages: [
-          {
-            role: "system",
-            content: "You are NEXUS, a powerful AI assistant. Be helpful and clear."
-          },
-          ...conversationHistory
+        model,
+        messages:[
+          { role:"system", content:`You are NEXUS, a powerful AI assistant. The user's name is ${user.name}. Be helpful, clear, and concise.` },
+          ...chat.messages.map(m=>({ role: m.role==="ai"?"assistant":"user", content:m.content }))
         ],
-        temperature: 0.7,
-        max_tokens: 1024
+        temperature:0.7, max_tokens:1024
       })
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || "API error");
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || "API error");
 
     const reply = data.choices[0].message.content;
-    conversationHistory.push({ role: "assistant", content: reply });
+    chat.messages.push({ role:"ai", content:reply });
+    saveChats(user.email, chats);
 
-    addMessage("ai", reply);
+    removeTyping();
+    renderMsg("ai", reply);
 
-  } catch (err) {
-    addMessage("ai", "⚠️ Error: " + err.message);
+  } catch(err) {
+    removeTyping();
+    renderMsg("ai", "⚠️ Error: " + err.message);
   }
 
-  isLoading = false;
+  busy = false;
+  document.getElementById("send-btn").disabled = false;
+  input.focus();
 }
-</script>
 
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sb-overlay").classList.toggle("visible");
+}
+function closeSidebar() {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sb-overlay").classList.remove("visible");
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ── Textarea auto-resize ──────────────────────────────────────────────────────
+document.getElementById("user-input").addEventListener("input", function() {
+  this.style.height = "auto";
+  this.style.height = Math.min(this.scrollHeight,120) + "px";
+});
+</script>
 </body>
 </html>
