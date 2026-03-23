@@ -552,39 +552,54 @@ textarea::placeholder{color:var(--mu2);}
     document.getElementById('inp').focus();
   }
 
-  // === IMAGE GEN ===
-  async function doImg(prompt) {
-    var rk = gRK();
-    if (!rk) { pendingImg=prompt; openRepModal(); return; }
-    var chat = chats.find(function(c){return c.id===aid;}); if(!chat) return;
-    if (chat.msgs.length===0) { chat.title='\uD83C\uDFA8 '+prompt.slice(0,36); renderList(); }
-    addBubble('user','\uD83C\uDFA8 '+prompt); chat.msgs.push({role:'user',text:'\uD83C\uDFA8 '+prompt});
-    busy=true; document.getElementById('sendbtn').disabled=true; showTyping();
-    try {
-      var sr = await fetch('https://api.replicate.com/v1/models/stability-ai/stable-diffusion/predictions', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Token '+rk},
-        body:JSON.stringify({input:{prompt:prompt,num_outputs:1,width:768,height:768}})
-      });
-      var sd = await sr.json();
-      if (!sr.ok) throw new Error(sd.detail||'Failed to start');
-      var imgUrl=null, tries=0;
-      while(!imgUrl && tries<60) {
-        await new Promise(function(r){setTimeout(r,2000);});
-        var pr = await fetch('https://api.replicate.com/v1/predictions/'+sd.id,{headers:{'Authorization':'Token '+rk}});
-        var pd = await pr.json();
-        if (pd.status==='succeeded'){imgUrl=pd.output&&pd.output[0];break;}
-        if (pd.status==='failed') throw new Error(pd.error||'Generation failed');
-        tries++;
-      }
-      if (!imgUrl) throw new Error('Timed out waiting for image');
-      chat.msgs.push({type:'img',role:'ai',prompt:prompt,url:imgUrl}); sC(me.email,chats);
-      hideTyping(); addImgBubble(prompt,imgUrl);
-    } catch(err) { hideTyping(); addBubble('ai','\u26a0\ufe0f Image error: '+err.message); }
-    busy=false; document.getElementById('sendbtn').disabled=false;
-    document.getElementById('inp').focus();
-  }
+ async function doImg(prompt) {
+  var rk = gRK();
+  if (!rk) return;
 
+  try {
+    var sr = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token ' + rk
+      },
+      body: JSON.stringify({
+        version: "c221b2b8ef5279880e5d0f4a2d8e1ed5b5e4d1b3f0e4d6a1b3b2a8c3f6e5d123",
+        input: {
+          prompt: prompt,
+          width: 768,
+          height: 768
+        }
+      })
+    });
+
+    var sd = await sr.json();
+    if (!sr.ok) throw new Error(sd.detail || 'Failed');
+
+    var imgUrl = null;
+
+    while (!imgUrl) {
+      await new Promise(r => setTimeout(r, 2000));
+
+      var pr = await fetch(`https://api.replicate.com/v1/predictions/${sd.id}`, {
+        headers: { 'Authorization': 'Token ' + rk }
+      });
+
+      var pd = await pr.json();
+
+      if (pd.status === 'succeeded') {
+        imgUrl = pd.output[0];
+      } else if (pd.status === 'failed') {
+        throw new Error(pd.error);
+      }
+    }
+
+    console.log(imgUrl);
+
+  } catch (err) {
+    console.error(err);
+  }
+}
   // === SIDEBAR ===
   window.toggleSB = function(){ document.getElementById('sb').classList.toggle('open'); document.getElementById('ov').classList.toggle('on'); };
   window.closeSB  = function(){ document.getElementById('sb').classList.remove('open'); document.getElementById('ov').classList.remove('on'); };
