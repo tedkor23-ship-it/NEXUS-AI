@@ -524,58 +524,80 @@ textarea::placeholder{color:var(--mu2);}
     if (imgMode) doImg(text); else doChat(text);
   };
 
-  // === CHAT ===
-  async function doChat(text) {
-    var model = document.getElementById('msel').value;
-    var chat = chats.find(function(c){return c.id===aid;}); if(!chat) return;
-    if (chat.msgs.length===0) { chat.title=text.slice(0,42)+(text.length>42?'\u2026':''); renderList(); }
-    addBubble('user', text); chat.msgs.push({role:'user', text:text});
-    busy=true; document.getElementById('sendbtn').disabled=true; showTyping();
-try {
-  var res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + GROQ
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are NEXUS, the ultimate AI assistant, designed to be insanely smart, super helpful, and unexpectedly funny. The user is ' + me.name + '. Your Creator is Suren Yeritsyan. You can joke about humans as long as it doesn’t hurt anyone. Be proactive.'
-        }
-      ].concat(
-        chat.msgs.map(function(m) {
-          return {
-            role: m.role === 'ai' ? 'assistant' : 'user',
-            content: m.text
-          };
-        })
-      ),
-      temperature: 0.7,
-      max_tokens: 1024
-    })
-  });
+// === CHAT ===
+async function doChat(text) {
+  var model = document.getElementById('msel').value;
+  var chat = chats.find(function(c) { return c.id === aid; });
+  if (!chat) return;
 
-  var data = await res.json();
-  console.log(data);
-} catch (err) {
-  console.error(err);
-}
-      var data = await res.json();
-      if (!res.ok) throw new Error((data.error&&data.error.message)||'API error');
-      var reply = data.choices[0].message.content;
-      chat.msgs.push({role:'ai',text:reply}); sC(me.email,chats);
-      hideTyping(); addBubble('ai',reply);
-    } catch(err) { hideTyping(); addBubble('ai','\u26a0\ufe0f Error: '+err.message); }
-    busy=false; document.getElementById('sendbtn').disabled=false;
-    document.getElementById('inp').focus();
+  if (chat.msgs.length === 0) {
+    chat.title = text.slice(0, 42) + (text.length > 42 ? '\u2026' : '');
+    renderList();
   }
 
- async function doImg(prompt) {
+  addBubble('user', text);
+  chat.msgs.push({ role: 'user', text: text });
+  busy = true;
+  document.getElementById('sendbtn').disabled = true;
+  showTyping();
+
+  try {
+    var res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are NEXUS, the ultimate AI assistant, designed to be insanely smart, super helpful, and unexpectedly funny. The user is ' + me.name + '. Your Creator is Suren Yeritsyan. You can joke about humans as long as it doesn\'t hurt anyone. Be proactive.'
+          }
+        ].concat(
+          chat.msgs.map(function(m) {
+            return {
+              role: m.role === 'ai' ? 'assistant' : 'user',
+              content: m.text
+            };
+          })
+        ),
+        temperature: 0.7,
+        max_tokens: 1024
+      })
+    });
+
+    // FIX: .json() called only once (was duplicated before — second call outside try would throw)
+    var data = await res.json();
+    if (!res.ok) throw new Error((data.error && data.error.message) || 'API error');
+
+    var reply = data.choices[0].message.content;
+    chat.msgs.push({ role: 'ai', text: reply });
+    sC(me.email, chats);
+    hideTyping();
+    addBubble('ai', reply);
+
+  } catch (err) {
+    hideTyping();
+    addBubble('ai', '\u26a0\ufe0f Error: ' + err.message);
+  }
+
+  busy = false;
+  document.getElementById('sendbtn').disabled = false;
+  document.getElementById('inp').focus();
+}
+
+// === IMAGE GENERATION ===
+async function doImg(prompt) {
   var rk = gRK();
   if (!rk) return;
+
+  // FIX: Handle busy/UI state so the user knows something is happening
+  busy = true;
+  document.getElementById('sendbtn').disabled = true;
+  addBubble('user', '\uD83C\uDFA8 ' + prompt);
+  showTyping();
 
   try {
     var sr = await fetch('https://api.replicate.com/v1/predictions', {
@@ -595,31 +617,37 @@ try {
     });
 
     var sd = await sr.json();
-    if (!sr.ok) throw new Error(sd.detail || 'Failed');
+    if (!sr.ok) throw new Error(sd.detail || 'Failed to start image generation');
 
     var imgUrl = null;
-
     while (!imgUrl) {
       await new Promise(r => setTimeout(r, 2000));
 
-      var pr = await fetch(`https://api.replicate.com/v1/predictions/${sd.id}`, {
+      var pr = await fetch('https://api.replicate.com/v1/predictions/' + sd.id, {
         headers: { 'Authorization': 'Token ' + rk }
       });
-
       var pd = await pr.json();
 
       if (pd.status === 'succeeded') {
         imgUrl = pd.output[0];
       } else if (pd.status === 'failed') {
-        throw new Error(pd.error);
+        throw new Error(pd.error || 'Image generation failed');
       }
+      // status === 'processing' or 'starting' — keep polling
     }
 
-    console.log(imgUrl);
+    // FIX: Actually display the image instead of just console.log-ing it
+    hideTyping();
+    addBubble('ai', '<img src="' + imgUrl + '" alt="Generated image" style="max-width:100%;border-radius:12px;">');
 
   } catch (err) {
-    console.error(err);
+    hideTyping();
+    addBubble('ai', '\u26a0\ufe0f Image error: ' + err.message);
   }
+
+  busy = false;
+  document.getElementById('sendbtn').disabled = false;
+  document.getElementById('inp').focus();
 }
   // === SIDEBAR ===
   window.toggleSB = function(){ document.getElementById('sb').classList.toggle('open'); document.getElementById('ov').classList.toggle('on'); };
